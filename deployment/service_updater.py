@@ -82,11 +82,7 @@ class ServiceUpdater(object):
             sys.exit(1)
 
     def upload_image(self, additional_tags):
-        image_name = spinalcase(self.name) + ':' + self.version
-        ecr_image_name = self.ecr_image_uri + ':' + self.version
-        self.ensure_repository()
-        self._push_image(image_name, ecr_image_name)
-
+        self.upload_artefacts()
         for new_tag in additional_tags:
             self._add_image_tag(self.version, new_tag)
 

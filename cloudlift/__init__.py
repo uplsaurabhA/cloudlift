@@ -102,13 +102,15 @@ def deploy_service(name, environment, version):
     ServiceUpdater(name, environment, None, version).run()
 
 
-@cli.command()
-@click.option('--local_tag', help='Commit sha for image to be uploaded')
+@cli.command(help="Build and upload Docker image to ECR")
+@_require_environment
+@_require_name
+@click.option('--version', default=None,
+              help='local image version tag')
 @click.option('--additional_tags', default=[], multiple=True,
               help='Additional tags for the image apart from commit SHA')
-@_require_name
-def upload_to_ecr(name, local_tag, additional_tags):
-    ServiceUpdater(name, '', '', local_tag).upload_image(additional_tags)
+def upload_to_ecr(name, environment, version, additional_tags):
+    ServiceUpdater(name, environment, '', version).upload_image(additional_tags)
 
 
 @cli.command(help="Get commit information of currently deployed code \
