@@ -126,8 +126,20 @@ service task")
 @_require_environment
 @_require_name
 @click.option('--mfa', help='MFA code', prompt='MFA Code')
-def start_session(name, environment, mfa):
+def deploy_service(name, environment, version):
     SessionCreator(name, environment).start_session(mfa)
+
+
+@cli.command(help="Update new TaskDefinition")
+@_require_environment
+@_require_name
+@click.option('--version', default=None,
+              help='local image version tag')
+@click.option('--print', default=True,
+              help='Print new TaskDefinition to stout')
+def deploy_service(name, environment, version):
+    ServiceUpdater(name, environment, None, version).run()
+
 
 if __name__ == '__main__':
     cli()
