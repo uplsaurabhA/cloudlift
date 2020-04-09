@@ -102,13 +102,15 @@ def deploy_service(name, environment, version):
     ServiceUpdater(name, environment, None, version).run()
 
 
-@cli.command()
-@click.option('--local_tag', help='Commit sha for image to be uploaded')
+@cli.command(help="Build and upload Docker image to ECR")
+@_require_environment
+@_require_name
+@click.option('--version', default=None,
+              help='local image version tag')
 @click.option('--additional_tags', default=[], multiple=True,
               help='Additional tags for the image apart from commit SHA')
-@_require_name
-def upload_to_ecr(name, local_tag, additional_tags):
-    ServiceUpdater(name, '', '', local_tag).upload_image(additional_tags)
+def upload_to_ecr(name, environment, version, additional_tags):
+    ServiceUpdater(name, environment, '', version).upload_image(additional_tags)
 
 
 @cli.command(help="Get commit information of currently deployed code \
@@ -126,7 +128,7 @@ service task")
 @_require_environment
 @_require_name
 @click.option('--mfa', help='MFA code', prompt='MFA Code')
-def deploy_service(name, environment, version):
+def start_session(name, environment, mfa):
     SessionCreator(name, environment).start_session(mfa)
 
 
@@ -135,10 +137,23 @@ def deploy_service(name, environment, version):
 @_require_name
 @click.option('--version', default=None,
               help='local image version tag')
-@click.option('--print', default=True,
-              help='Print new TaskDefinition to stout')
-def deploy_service(name, environment, version):
-    ServiceUpdater(name, environment, None, version).run()
+# @click.option('--fout', default=True,
+#               help='Print new TaskDefinition to stout')
+def get_new_task_definition(name, environment, version):
+    # 25 known properties of RegisterTaskDefinitionRequest
+    properties = ["requiresCompatibilities", "customQueryParameters", "taskRoleArn", "requestClientOptions",
+                  "customRequestHeaders", "generalProgressListener", "sdkRequestTimeout", "requestCredentials",
+                  "requestMetricCollector", "executionRoleArn", "networkMode", "cloneSource", "volumes",
+                  "requestCredentialsProvider", "containerDefinitions", "memory", "family", "cpu",
+                  "sdkClientExecutionTimeout", "placementConstraints", "tags", "ipcMode", "pidMode",
+                  "proxyConfiguration", "inferenceAccelerators"]
+    task_definition = ServiceUpdater(name, environment, None, version).generate_task_definition()
+    filtered_task_definition = {property: task_definition[property] for property in properties if
+                                property in task_definition}
+    import json
+    f = open("task_definition.json", "w")
+    f.write(json.dumps(filtered_task_definition))
+    f.close()
 
 
 if __name__ == '__main__':

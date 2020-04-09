@@ -81,12 +81,35 @@ class ServiceUpdater(object):
         if any(exit_codes) != 0:
             sys.exit(1)
 
-    def upload_image(self, additional_tags):
-        image_name = spinalcase(self.name) + ':' + self.version
-        ecr_image_name = self.ecr_image_uri + ':' + self.version
-        self.ensure_repository()
-        self._push_image(image_name, ecr_image_name)
+    def generate_task_definition(self):
+        self.get_version()
+        self.init_stack_info()
+        if not os.path.exists(self.env_sample_file):
+            log_err('env.sample not found. Exiting.')
+            exit(1)
+        log_intent("name: " + self.name + " | environment: " +
+                   self.environment + " | version: " + str(self.version))
 
+        ecs_client = EcsClient(None, None, self.region)
+
+        for index, service_name in enumerate(self.ecs_service_names):
+            print(self.name, service_name)
+            image_url = self.ecr_image_uri
+            image_url += (':' + self.version)
+            # care about 1 at the moment
+            return deployer.build_new_task_definition(
+                ecs_client,
+                self.cluster_name,
+                service_name,
+                self.version,
+                self.name,
+                self.env_sample_file,
+                self.environment,
+                image_url)
+
+
+    def upload_image(self, additional_tags):
+        self.upload_artefacts()
         for new_tag in additional_tags:
             self._add_image_tag(self.version, new_tag)
 
@@ -179,6 +202,27 @@ branch or commit SHA")
             )['images'][0]
         except:
             return None
+
+    def get_version(self):
+        if self.version:
+            try:
+                commit_sha = self._find_commit_sha(self.version)
+            except:
+                commit_sha = self.version
+            log_intent("Using commit hash " + commit_sha + " to find image")
+        else:
+            dirty = subprocess.check_output(
+                ["git", "status", "--short"]
+            ).decode("utf-8")
+            if dirty:
+                self.version = 'dirty'
+                log_intent("Version parameter was not provided. Determined \
+        version to be " + self.version + " based on current status")
+            else:
+                self.version = self._find_commit_sha()
+                log_intent("Version parameter was not provided. Determined \
+        version to be " + self.version + " based on current status")
+
 
     def ensure_image_in_ecr(self):
         if self.version:

@@ -9,10 +9,27 @@ from deployment.ecs import DeployAction
 from deployment.logging import log_bold, log_err, log_intent, log_with_color
 
 
+def deploy_new_version(client, cluster_name, ecs_service_name,
+                       deploy_version_tag, service_name, sample_env_file_path,
+                       env_name, color='white', complete_image_uri=None):
+    task_definition = build_new_task_definition(
+        client, cluster_name, ecs_service_name,
+        deploy_version_tag, service_name, sample_env_file_path,
+        env_name, complete_image_uri)
+    deployment = DeployAction(client, cluster_name, ecs_service_name)
+    print_task_diff(ecs_service_name, task_definition.diff, color)
+    new_task_definition = deployment.update_task_definition(task_definition)
+    response = deploy_and_wait(deployment, new_task_definition, color)
+    if response:
+        log_bold(ecs_service_name + " Deployed successfully.")
+    else:
+        log_err(ecs_service_name + " Deployment failed.")
+    return response
+
+
 def build_new_task_definition(client, cluster_name, ecs_service_name,
                        deploy_version_tag, service_name, sample_env_file_path,
                        env_name, complete_image_uri=None):
-
     env_config = build_config(env_name, service_name, sample_env_file_path)
     deployment = DeployAction(client, cluster_name, ecs_service_name)
     if deployment.service.desired_count == 0:
@@ -34,33 +51,7 @@ def build_new_task_definition(client, cluster_name, ecs_service_name,
     for container in task_definition.containers:
         task_definition.apply_container_environment(container, env_config)
 
-    # print_task_diff(ecs_service_name, task_definition.diff, color)
-    # return new_task_definition = deployment.update_task_definition(task_definition)
-
     return task_definition
-
-
-def deploy_new_version(client, cluster_name, ecs_service_name,
-                       deploy_version_tag, service_name, sample_env_file_path,
-                       env_name, color='white', complete_image_uri=None):
-
-    task_definition = build_new_task_definition(
-        client, cluster_name, ecs_service_name,
-        deploy_version_tag, service_name, sample_env_file_path,
-        env_name, complete_image_uri)
-
-    deployment = DeployAction(client, cluster_name, ecs_service_name)
-
-    print_task_diff(ecs_service_name, task_definition.diff, color)
-
-    # shouldn't they be same?
-    new_task_definition = deployment.update_task_definition(task_definition)
-    response = deploy_and_wait(deployment, new_task_definition, color)
-    if response:
-        log_bold(ecs_service_name + " Deployed successfully.")
-    else:
-        log_err(ecs_service_name + " Deployment failed.")
-    return response
 
 
 def deploy_and_wait(deployment, new_task_definition, color):
