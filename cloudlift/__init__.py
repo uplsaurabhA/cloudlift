@@ -102,15 +102,14 @@ def deploy_service(name, environment, version):
     ServiceUpdater(name, environment, None, version).run()
 
 
-@cli.command(help="Build and upload Docker image to ECR")
-@_require_environment
-@_require_name
-@click.option('--version', default=None,
-              help='local image version tag')
+@cli.command()
+@click.option('--version', default=None, help='Git commit sha, branch, tag')
+@click.option('--force_update', default=False, help='Rebuild if already exists')
 @click.option('--additional_tags', default=[], multiple=True,
               help='Additional tags for the image apart from commit SHA')
-def upload_to_ecr(name, environment, version, additional_tags):
-    ServiceUpdater(name, environment, '', version).upload_image(additional_tags)
+@_require_name
+def upload_to_ecr(name, version, additional_tags, force_update):
+    ServiceUpdater(name, '', '', version).upload_image(additional_tags, force_update)
 
 
 @cli.command(help="Get commit information of currently deployed code \
@@ -132,13 +131,37 @@ def start_session(name, environment, mfa):
     SessionCreator(name, environment).start_session(mfa)
 
 
-@cli.command(help="Update new TaskDefinition")
+'''
+New commands
+'''
+
+
+@cli.command(help="Get Docker tag")
+@_require_name
+@click.option('--version', default=None, help='Git commit sha, branch, tag')
+def get_tag(name, version):
+    print(ServiceUpdater(name, '', '', version).get_tag())
+
+
+@cli.command(help="Build Docker image")
+@_require_name
+@click.option('--version', default=None, help='Git commit sha, branch, tag')
+def build_image(name, version):
+    ServiceUpdater(name, '', '', version).build_image()
+
+
+@cli.command(help="Push Docker image")
+@_require_name
+@_require_environment
+@click.option('--version', default=None, help='Git commit sha, branch, tag')
+def push_image(name, environment, version):
+    ServiceUpdater(name, environment, '', version).push_image()
+
+
+@cli.command(help="Get new ECS TaskDefinition based on code + param changes")
 @_require_environment
 @_require_name
-@click.option('--version', default=None,
-              help='local image version tag')
-# @click.option('--fout', default=True,
-#               help='Print new TaskDefinition to stout')
+@click.option('--version', default=None, help='Git commit sha, branch, tag')
 def get_new_task_definition(name, environment, version):
     # 25 known properties of RegisterTaskDefinitionRequest
     properties = ["requiresCompatibilities", "customQueryParameters", "taskRoleArn", "requestClientOptions",
@@ -151,7 +174,11 @@ def get_new_task_definition(name, environment, version):
     filtered_task_definition = {property: task_definition[property] for property in properties if
                                 property in task_definition}
     import json
-    f = open("task_definition.json", "w")
+    # this won't cover local dirty project
+    filename = "task_definition.json"
+    if version:
+        filename = "task_definition-{}.json".format(version)
+    f = open(filename, "w")
     f.write(json.dumps(filtered_task_definition))
     f.close()
 
