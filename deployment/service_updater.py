@@ -103,8 +103,13 @@ class ServiceUpdater(object):
         tag = self.get_tag()
         image_name = spinalcase(self.name) + ':' + tag
         log_bold("Building docker image " + image_name)
+        # switch to the version
+        current_branch = git.get_current_branch()
+        log_bold("current branch " + current_branch)
         git.checkout(self.version)
         docker.build_image(image_name, self.working_dir)
+        # switch back
+        git.checkout(current_branch)
         log_bold("Built " + image_name)
 
     def upload_artefacts(self, force_update):
@@ -171,14 +176,11 @@ class ServiceUpdater(object):
     def get_tag(self):
         commit_sha = git.find_commit_sha(self.version)
         is_dirty = git.is_dirty()
-        if self.version:
-            if is_dirty:
-                log_err("Local copy is dirty. Please commit your changes first.")
-                exit(1)
-            return commit_sha
-        else:
-            if is_dirty:
-                commit_sha += "-dirty-" + getpass.getuser()
+        if self.version and is_dirty:
+            log_err("Local copy is dirty. Please commit your changes first.")
+            exit(1)
+        if is_dirty:
+            commit_sha += "-dirty-" + getpass.getuser()
         return commit_sha
 
     def ensure_image_in_ecr(self, force_update):
