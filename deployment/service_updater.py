@@ -169,10 +169,16 @@ class ServiceUpdater(object):
             return None
 
     def get_tag(self):
+        commit_sha = git.find_commit_sha(self.version)
+        is_dirty = git.is_dirty()
         if self.version:
-            commit_sha = git.find_commit_sha(self.version)
-        if git.is_dirty():
-            commit_sha += "-dirty-" + getpass.getuser()
+            if is_dirty:
+                log_err("Local copy is dirty. Please commit your changes first.")
+                exit(1)
+            return commit_sha
+        else:
+            if is_dirty:
+                commit_sha += "-dirty-" + getpass.getuser()
         return commit_sha
 
     def ensure_image_in_ecr(self, force_update):

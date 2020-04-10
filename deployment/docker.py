@@ -12,6 +12,7 @@ def build_image(image_name, context_dir):
         context_dir
     ])
 
+
 def push_image(local_name, remote_name):
     try:
         subprocess.check_call(["docker", "tag", local_name, remote_name])
