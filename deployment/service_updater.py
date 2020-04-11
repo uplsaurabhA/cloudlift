@@ -208,20 +208,19 @@ class ServiceUpdater(object):
             pass
 
     def generate_task_definition(self):
-        self.get_version()
         self.init_stack_info()
+        tag = self.get_tag()
         if not os.path.exists(self.env_sample_file):
             log_err('env.sample not found. Exiting.')
             exit(1)
-        log_intent("name: " + self.name + " | environment: " +
-                   self.environment + " | version: " + str(self.version))
+        log_intent("name: " + self.name
+                   + " | environment: " + self.environment
+                   + " | tag: " + str(tag))
 
         ecs_client = EcsClient(None, None, self.region)
-
         for index, service_name in enumerate(self.ecs_service_names):
-            print(self.name, service_name)
             image_url = self.ecr_image_uri
-            image_url += (':' + self.version)
+            image_url += (':' + tag)
             # care about 1 at the moment
             return deployer.build_new_task_definition(
                 ecs_client,

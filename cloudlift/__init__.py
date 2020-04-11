@@ -108,8 +108,9 @@ def deploy_service(name, environment, version):
 @click.option('--additional_tags', default=[], multiple=True,
               help='Additional tags for the image apart from commit SHA')
 @_require_name
-def upload_to_ecr(name, version, additional_tags, force_update):
-    ServiceUpdater(name, '', '', version).upload_image(additional_tags, force_update)
+@_require_environment
+def upload_to_ecr(name, environment, version, additional_tags, force_update):
+    ServiceUpdater(name, environment, '', version).upload_image(additional_tags, force_update)
 
 
 @cli.command(help="Get commit information of currently deployed code \
@@ -162,7 +163,7 @@ def push_image(name, environment, version):
 @_require_environment
 @_require_name
 @click.option('--version', default=None, help='Git commit sha, branch, tag')
-def get_new_task_definition(name, environment, version):
+def make_task_definition(name, environment, version):
     # 25 known properties of RegisterTaskDefinitionRequest
     properties = ["requiresCompatibilities", "customQueryParameters", "taskRoleArn", "requestClientOptions",
                   "customRequestHeaders", "generalProgressListener", "sdkRequestTimeout", "requestCredentials",
