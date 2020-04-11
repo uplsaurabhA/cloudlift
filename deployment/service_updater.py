@@ -194,8 +194,8 @@ class ServiceUpdater(object):
             log_bold("Image not found in ECR. Building image")
 
         log_bold("Building image")
-        self.build_image(tag)
-        self.push_image(tag)
+        self.build_image()
+        self.push_image()
         image = self._find_image_in_ecr(tag)
         try:
             image_manifest = image['imageManifest']
