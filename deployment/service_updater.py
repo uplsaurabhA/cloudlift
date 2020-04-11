@@ -145,6 +145,7 @@ class ServiceUpdater(object):
         tag = self.get_tag()
         image_name = spinalcase(self.name) + ':' + tag
         ecr_name = self.ecr_image_uri + ':' + tag
+        self._login_to_ecr()
         docker.push_image(image_name, ecr_name)
         log_intent('Pushed the image (' + image_name + ') to (' + ecr_name + ') sucessfully.')
 
